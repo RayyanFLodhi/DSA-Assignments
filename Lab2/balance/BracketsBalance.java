@@ -28,11 +28,35 @@ class BracketsBalance {
      * @return boolean
      */
     private boolean isBalanced(String exp) {
+        ArrayStack<Character> arrayStack = new ArrayStack<Character>();
+        for (int i=0; i <= (exp.length() - 1); i++) {
+            if (exp.charAt(i) == '(' || exp.charAt(i) == '{' || exp.charAt(i) == '[') {
+                arrayStack.push(exp.charAt(i));
+            }
 
-        // INSERT YOUR CODE HERE 
+            else if (exp.charAt(i) == ')') {
+                if (arrayStack.top() == '(') {
+                    arrayStack.pop();
+                }
+                else {return false;}
+            }
 
-        return false; // dummy answer for startup code
+            else if (exp.charAt(i) == ']') {
+                if (arrayStack.top() == '[') {
+                    arrayStack.pop();
+                }
+                else {return false;}
+            }
 
+            else if (exp.charAt(i) == '}') {
+                if (arrayStack.top() == '{') {
+                    arrayStack.pop();
+                }
+                else {return false;}
+            }
+        }
+
+        return arrayStack.isEmpty(); // dummy answer for startup code
     }
 
     /**
