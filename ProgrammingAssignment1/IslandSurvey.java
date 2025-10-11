@@ -3,11 +3,24 @@
 // Name: Rayyan Lodhi
 // Student #: 300437765
 
-import java.io.*;
 import java.util.*;
 
 public class IslandSurvey {
     
+    // Helper class to store island analysis results
+    static class IslandResult {
+        int islandCount;
+        List<Integer> islandSizes;
+        int totalArea;
+        
+        IslandResult(int count, List<Integer> sizes, int area) {
+            this.islandCount = count;
+            this.islandSizes = sizes;
+            this.totalArea = area;
+        }
+    }
+    
+
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
         
@@ -33,10 +46,24 @@ public class IslandSurvey {
             }
             
             // Process the map and find islands
-            int islandCount = countIslands(map, rows, cols);
+            IslandResult result = analyzeIslands(map, rows, cols);
             
-            // Output the result
-            System.out.println(islandCount);
+            // Output the results
+            System.out.println(result.islandCount);
+            
+            // Output island sizes in decreasing order
+            if (result.islandSizes.isEmpty()) {
+                System.out.println(-1);
+            } else {
+                for (int i = 0; i < result.islandSizes.size(); i++) {
+                    if (i > 0) System.out.print(" ");
+                    System.out.print(result.islandSizes.get(i));
+                }
+                System.out.println();
+            }
+            
+            // Output total area
+            System.out.println(result.totalArea);
             
         } catch (Exception e) {
             System.err.println("Error reading input: " + e.getMessage());
@@ -46,77 +73,58 @@ public class IslandSurvey {
     }
     
     /**
-     * Counts the number of islands (connected components of '1's) in the map
-     * using Union-Find data structure
+     * Analyzes islands in the map using Union-Find data structure
+     * Follows the exact algorithm specification from the assignment
+     * Returns island count, sizes in decreasing order, and total area
      */
-    private static int countIslands(char[][] map, int rows, int cols) {
-        Partition<Integer> partition = new Partition<>();
-        Node<Integer>[][] nodes = new Node[rows][cols];
+    private static IslandResult analyzeIslands(char[][] map, int rows, int cols) {
+        // Create S by T auxiliary array cluster to keep track of cluster positions
+        // with all entries initialized to null
+        Node<Integer>[][] cluster = new Node[rows][cols];
         
-        // Create nodes for all land cells (1s)
+        // Create BP a new object of the class Partition
+        Partition<Integer> BP = new Partition<>();
+        
+        // for each black grid point i,j:
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
                 if (map[i][j] == '1') {
-                    // Create a unique identifier for this position
-                    int positionId = i * cols + j;
-                    nodes[i][j] = partition.makeCluster(positionId);
+                    // p = BP.makeCluster(info(i,j));
+                    // cluster[i,j] = p
+                    int positionId = i * cols + j; // info(i,j) - unique identifier
+                    cluster[i][j] = BP.makeCluster(positionId);
                 }
             }
         }
         
-        // Union adjacent land cells
+        // for each black grid point i,j:
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
                 if (map[i][j] == '1') {
-                    // Check right neighbor
-                    if (j + 1 < cols && map[i][j + 1] == '1') {
-                        partition.union(nodes[i][j], nodes[i][j + 1]);
-                    }
-                    // Check bottom neighbor
-                    if (i + 1 < rows && map[i + 1][j] == '1') {
-                        partition.union(nodes[i][j], nodes[i + 1][j]);
+                    // for each black grid point k,l adjacent to i,j:
+                    int[][] directions = {{0,1}, {1,0}, {0,-1}, {-1,0}}; // right, down, left, up
+                    for (int[] dir : directions) {
+                        int k = i + dir[0];
+                        int l = j + dir[1];
+                        
+                        // Check if (k,l) is within bounds and is black
+                        if (k >= 0 && k < rows && l >= 0 && l < cols && map[k][l] == '1') {
+                            // if BP.find(cluster[i,j]) != BP.find(cluster[k,l]) then
+                            if (BP.find(cluster[i][j]) != BP.find(cluster[k][l])) {
+                                // BP.union(cluster[i,j], cluster[k,l])
+                                BP.union(cluster[i][j], cluster[k][l]);
+                            }
+                        }
                     }
                 }
             }
         }
         
-        return partition.numberOfClusters();
+        // Get island count and sizes
+        int islandCount = BP.numberOfClusters();
+        List<Integer> islandSizes = BP.clusterSizes(); // Already in decreasing order
+        int totalArea = islandSizes.stream().mapToInt(Integer::intValue).sum();
+        
+        return new IslandResult(islandCount, islandSizes, totalArea);
     }
-    
-    /**
-     * Alternative method using DFS (Depth-First Search) approach
-     * This is commented out but available as an alternative implementation
-     */
-    /*
-    private static int countIslandsDFS(char[][] map, int rows, int cols) {
-        boolean[][] visited = new boolean[rows][cols];
-        int islandCount = 0;
-        
-        for (int i = 0; i < rows; i++) {
-            for (int j = 0; j < cols; j++) {
-                if (map[i][j] == '1' && !visited[i][j]) {
-                    dfs(map, visited, i, j, rows, cols);
-                    islandCount++;
-                }
-            }
-        }
-        
-        return islandCount;
-    }
-    
-    private static void dfs(char[][] map, boolean[][] visited, int row, int col, int rows, int cols) {
-        if (row < 0 || row >= rows || col < 0 || col >= cols || 
-            map[row][col] == '0' || visited[row][col]) {
-            return;
-        }
-        
-        visited[row][col] = true;
-        
-        // Visit all 4 directions
-        dfs(map, visited, row + 1, col, rows, cols); // down
-        dfs(map, visited, row - 1, col, rows, cols); // up
-        dfs(map, visited, row, col + 1, rows, cols); // right
-        dfs(map, visited, row, col - 1, rows, cols); // left
-    }
-    */
 }
