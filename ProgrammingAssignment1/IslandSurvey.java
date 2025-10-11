@@ -20,6 +20,15 @@ public class IslandSurvey {
         }
     }
     
+    // Simple class to store position info(i,j) as required by assignment
+    static class PositionInfo {
+        int row, col;
+        PositionInfo(int row, int col) {
+            this.row = row;
+            this.col = col;
+        }
+    }
+    
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -80,10 +89,10 @@ public class IslandSurvey {
     private static IslandResult analyzeIslands(char[][] map, int rows, int cols) {
         // Create S by T auxiliary array cluster to keep track of cluster positions
         // with all entries initialized to null
-        Node<Integer>[][] cluster = new Node[rows][cols];
+        Node<PositionInfo>[][] cluster = new Node[rows][cols];
         
         // Create BP a new object of the class Partition
-        Partition<Integer> BP = new Partition<>();
+        Partition<PositionInfo> BP = new Partition<>();
         
         // for each black grid point i,j:
         for (int i = 0; i < rows; i++) {
@@ -91,8 +100,8 @@ public class IslandSurvey {
                 if (map[i][j] == '1') {
                     // p = BP.makeCluster(info(i,j));
                     // cluster[i,j] = p
-                    int positionId = i * cols + j; // info(i,j) - unique identifier
-                    cluster[i][j] = BP.makeCluster(positionId);
+                    PositionInfo position = new PositionInfo(i, j); // info(i,j) - stores i and j coordinates
+                    cluster[i][j] = BP.makeCluster(position);
                 }
             }
         }
@@ -101,19 +110,20 @@ public class IslandSurvey {
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
                 if (map[i][j] == '1') {
-                    // for each black grid point k,l adjacent to i,j:
-                    int[][] directions = {{0,1}, {1,0}, {0,-1}, {-1,0}}; // right, down, left, up
-                    for (int[] dir : directions) {
-                        int k = i + dir[0];
-                        int l = j + dir[1];
-                        
-                        // Check if (k,l) is within bounds and is black
-                        if (k >= 0 && k < rows && l >= 0 && l < cols && map[k][l] == '1') {
-                            // if BP.find(cluster[i,j]) != BP.find(cluster[k,l]) then
-                            if (BP.find(cluster[i][j]) != BP.find(cluster[k][l])) {
-                                // BP.union(cluster[i,j], cluster[k,l])
-                                BP.union(cluster[i][j], cluster[k][l]);
-                            }
+                    // OPTIMIZATION: Check only right and down directions to avoid redundant checks
+                    // This halves the number of adjacency checks while maintaining correctness
+                    
+                    // Check right neighbor (i, j+1)
+                    if (j + 1 < cols && map[i][j + 1] == '1') {
+                        if (BP.find(cluster[i][j]) != BP.find(cluster[i][j + 1])) {
+                            BP.union(cluster[i][j], cluster[i][j + 1]);
+                        }
+                    }
+                    
+                    // Check down neighbor (i+1, j)
+                    if (i + 1 < rows && map[i + 1][j] == '1') {
+                        if (BP.find(cluster[i][j]) != BP.find(cluster[i + 1][j])) {
+                            BP.union(cluster[i][j], cluster[i + 1][j]);
                         }
                     }
                 }
