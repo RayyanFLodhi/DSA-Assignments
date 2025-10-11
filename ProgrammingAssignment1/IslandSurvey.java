@@ -41,7 +41,7 @@ public class IslandSurvey {
             // Create the map grid
             char[][] map = new char[rows][cols];
             
-            // Read the map data
+            // Read the initial map data
             for (int i = 0; i < rows; i++) {
                 String line = scanner.next();
                 for (int j = 0; j < cols; j++) {
@@ -49,30 +49,44 @@ public class IslandSurvey {
                 }
             }
             
-            // Read the final 0 (if present)
-            if (scanner.hasNextInt()) {
-                int endMarker = scanner.nextInt();
-            }
+            // Read the number of phases F
+            int numPhases = scanner.nextInt();
             
-            // Process the map and find islands
-            IslandResult result = analyzeIslands(map, rows, cols);
+            // Initialize the partition system for phases
+            Partition<PositionInfo> BP = new Partition<>();
+            Node<PositionInfo>[][] cluster = new Node[rows][cols];
             
-            // Output the results
-            System.out.println(result.islandCount);
+            // Phase 0: Initial survey
+            IslandResult result = processInitialPhase(map, rows, cols, BP, cluster);
+            printResults(result);
             
-            // Output island sizes in decreasing order
-            if (result.islandSizes.isEmpty()) {
-                System.out.println(-1);
-            } else {
-                for (int i = 0; i < result.islandSizes.size(); i++) {
-                    if (i > 0) System.out.print(" ");
-                    System.out.print(result.islandSizes.get(i));
-                }
+            // Add empty line after initial phase if there are more phases
+            if (numPhases > 0) {
                 System.out.println();
             }
             
-            // Output total area
-            System.out.println(result.totalArea);
+            // Process subsequent phases
+            for (int phase = 0; phase < numPhases; phase++) {
+                // Read L (number of new land squares for this phase)
+                int L = scanner.nextInt();
+                
+                // Read L pairs of coordinates (2L numbers total)
+                List<PositionInfo> newPositions = new ArrayList<>();
+                for (int k = 0; k < L; k++) {
+                    int i = scanner.nextInt();
+                    int j = scanner.nextInt();
+                    newPositions.add(new PositionInfo(i, j));
+                }
+                
+                // Process the new phase
+                result = processNewPhase(map, rows, cols, BP, cluster, newPositions);
+                printResults(result);
+                
+                // Add empty line between phases (except after the last phase)
+                if (phase < numPhases - 1) {
+                    System.out.println();
+                }
+            }
             
         } catch (Exception e) {
             System.err.println("Error reading input: " + e.getMessage());
@@ -81,18 +95,31 @@ public class IslandSurvey {
         }
     }
     
-    /**
-     * Analyzes islands in the map using Union-Find data structure
-     * Follows the exact algorithm specification from the assignment
-     * Returns island count, sizes in decreasing order, and total area
-     */
-    private static IslandResult analyzeIslands(char[][] map, int rows, int cols) {
-        // Create S by T auxiliary array cluster to keep track of cluster positions
-        // with all entries initialized to null
-        Node<PositionInfo>[][] cluster = new Node[rows][cols];
+    private static void printResults(IslandResult result) {
+        // Output the results
+        System.out.println(result.islandCount);
         
-        // Create BP a new object of the class Partition
-        Partition<PositionInfo> BP = new Partition<>();
+        // Output island sizes in decreasing order (each on separate line)
+        if (result.islandSizes.isEmpty()) {
+            System.out.println(-1);
+        } else {
+            for (int size : result.islandSizes) {
+                System.out.println(size);
+            }
+        }
+        
+        // Output total area
+        System.out.println(result.totalArea);
+    }
+    
+    /**
+     * Processes the initial phase (Phase 0) - creates initial partition from the map
+     * Follows the exact algorithm specification from the assignment
+     */
+    private static IslandResult processInitialPhase(char[][] map, int rows, int cols, 
+                                                   Partition<PositionInfo> BP, Node<PositionInfo>[][] cluster) {
+        // Create S by T auxiliary array cluster to keep track of cluster positions
+        // with all entries initialized to null (already done in main)
         
         // for each black grid point i,j:
         for (int i = 0; i < rows; i++) {
@@ -130,6 +157,60 @@ public class IslandSurvey {
             }
         }
         
+        return getCurrentResults(BP);
+    }
+    
+    /**
+     * Processes a new phase by adding new black positions and updating islands
+     * Follows the exact algorithm specification from the assignment
+     */
+    private static IslandResult processNewPhase(char[][] map, int rows, int cols,
+                                               Partition<PositionInfo> BP, Node<PositionInfo>[][] cluster,
+                                               List<PositionInfo> newPositions) {
+        
+        // for each point i,j in the new list
+        for (PositionInfo pos : newPositions) {
+            int i = pos.row;
+            int j = pos.col;
+            
+            // p = BP.makeCluster(info(i,j));
+            // cluster[i,j] = p
+            cluster[i][j] = BP.makeCluster(pos);
+            
+            // change grid point i,j to black
+            map[i][j] = '1';
+        }
+        
+        // for each point i,j in the new list
+        for (PositionInfo pos : newPositions) {
+            int i = pos.row;
+            int j = pos.col;
+            
+            // for each black grid point k,l adjacent to i,j:
+            // Check all 4 directions for new positions (they might connect to existing islands)
+            int[][] directions = {{0,1}, {1,0}, {0,-1}, {-1,0}}; // right, down, left, up
+            for (int[] dir : directions) {
+                int k = i + dir[0];
+                int l = j + dir[1];
+                
+                // Check if (k,l) is within bounds and is black
+                if (k >= 0 && k < rows && l >= 0 && l < cols && map[k][l] == '1') {
+                    // if BP.find(cluster[i,j]) != BP.find(cluster[k,l]) then
+                    if (BP.find(cluster[i][j]) != BP.find(cluster[k][l])) {
+                        // BP.union(cluster[i,j], cluster[k,l])
+                        BP.union(cluster[i][j], cluster[k][l]);
+                    }
+                }
+            }
+        }
+        
+        return getCurrentResults(BP);
+    }
+    
+    /**
+     * Gets the current island analysis results from the partition
+     */
+    private static IslandResult getCurrentResults(Partition<PositionInfo> BP) {
         // Get island count and sizes
         int islandCount = BP.numberOfClusters();
         List<Integer> islandSizes = BP.clusterSizes(); // Already in decreasing order
