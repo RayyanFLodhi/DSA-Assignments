@@ -7,7 +7,7 @@ import java.util.*;
 
 public class IslandSurvey {
     
-    // Helper class to store island analysis results
+    // Helper class used to store island results, making it easy to print.
     static class IslandResult {
         int islandCount;
         List<Integer> islandSizes;
@@ -20,7 +20,7 @@ public class IslandSurvey {
         }
     }
     
-    // Simple class to store position info(i,j) as required by assignment
+    // Correlates to "Info" in Assignment instructions - used to store position info(i,j)
     static class PositionInfo {
         int row, col;
         PositionInfo(int row, int col) {
@@ -30,6 +30,7 @@ public class IslandSurvey {
     }
     
 
+    // Main method that puts everything together 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
         
@@ -41,7 +42,7 @@ public class IslandSurvey {
             // Create the map grid
             char[][] map = new char[rows][cols];
             
-            // Read the initial map data
+            // Read the initial map data and instantiate the map
             for (int i = 0; i < rows; i++) {
                 String line = scanner.next();
                 for (int j = 0; j < cols; j++) {
@@ -56,7 +57,7 @@ public class IslandSurvey {
             Partition<PositionInfo> BP = new Partition<>();
             Node<PositionInfo>[][] cluster = new Node[rows][cols];
             
-            // Phase 0: Initial survey
+            // Processing Initial Phase
             IslandResult result = processInitialPhase(map, rows, cols, BP, cluster);
             printResults(result);
             
@@ -95,6 +96,7 @@ public class IslandSurvey {
         }
     }
     
+    // Function to print Island Results into Output File
     private static void printResults(IslandResult result) {
         // Output the results
         System.out.println(result.islandCount);
@@ -102,7 +104,9 @@ public class IslandSurvey {
         // Output island sizes in decreasing order (each on separate line)
         if (result.islandSizes.isEmpty()) {
             System.out.println(-1);
-        } else {
+        } 
+        
+        else {
             for (int size : result.islandSizes) {
                 System.out.println(size);
             }
@@ -115,12 +119,11 @@ public class IslandSurvey {
     /**
      * Processes the initial phase (Phase 0) - creates initial partition from the map
      * Follows the exact algorithm specification from the assignment
-     */
-    private static IslandResult processInitialPhase(char[][] map, int rows, int cols, 
-                                                   Partition<PositionInfo> BP, Node<PositionInfo>[][] cluster) {
-        // Create S by T auxiliary array cluster to keep track of cluster positions
+    */
+    private static IslandResult processInitialPhase(char[][] map, int rows, int cols, Partition<PositionInfo> BP, Node<PositionInfo>[][] cluster) {        
+        // Create S by T auxiliary array cluster to keep track of cluster positions (map)
         // with all entries initialized to null (already done in main)
-        
+
         // for each black grid point i,j:
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
@@ -137,9 +140,6 @@ public class IslandSurvey {
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
                 if (map[i][j] == '1') {
-                    // OPTIMIZATION: Check only right and down directions to avoid redundant checks
-                    // This halves the number of adjacency checks while maintaining correctness
-                    
                     // Check right neighbor (i, j+1)
                     if (j + 1 < cols && map[i][j + 1] == '1') {
                         if (BP.find(cluster[i][j]) != BP.find(cluster[i][j + 1])) {
@@ -153,6 +153,7 @@ public class IslandSurvey {
                             BP.union(cluster[i][j], cluster[i + 1][j]);
                         }
                     }
+                    // Note that there is no need to check above and left neighbours as they are redundant.
                 }
             }
         }
@@ -164,9 +165,7 @@ public class IslandSurvey {
      * Processes a new phase by adding new black positions and updating islands
      * Follows the exact algorithm specification from the assignment
      */
-    private static IslandResult processNewPhase(char[][] map, int rows, int cols,
-                                               Partition<PositionInfo> BP, Node<PositionInfo>[][] cluster,
-                                               List<PositionInfo> newPositions) {
+    private static IslandResult processNewPhase(char[][] map, int rows, int cols, Partition<PositionInfo> BP, Node<PositionInfo>[][] cluster, List<PositionInfo> newPositions) {
         
         // for each point i,j in the new list
         for (PositionInfo pos : newPositions) {
@@ -195,9 +194,9 @@ public class IslandSurvey {
                 
                 // Check if (k,l) is within bounds and is black
                 if (k >= 0 && k < rows && l >= 0 && l < cols && map[k][l] == '1') {
+                    
                     // if BP.find(cluster[i,j]) != BP.find(cluster[k,l]) then
                     if (BP.find(cluster[i][j]) != BP.find(cluster[k][l])) {
-                        // BP.union(cluster[i,j], cluster[k,l])
                         BP.union(cluster[i][j], cluster[k][l]);
                     }
                 }
