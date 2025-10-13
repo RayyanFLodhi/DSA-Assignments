@@ -15,8 +15,8 @@ public class IslandLakeSurvey {
         int totalLakeCount;
         int totalLakeArea;
 
-        IslandLakeResult(int islandCount, List<Integer> islandSizes, int totalIslandArea,
-                         int totalLakeCount, int totalLakeArea) {
+        // Group all output pieces together so printing code stays simple and consistent
+        IslandLakeResult(int islandCount, List<Integer> islandSizes, int totalIslandArea, int totalLakeCount, int totalLakeArea) {
             this.islandCount = islandCount;
             this.islandSizes = islandSizes;
             this.totalIslandArea = totalIslandArea;
@@ -28,28 +28,30 @@ public class IslandLakeSurvey {
     // Position info to store (i, j) inside Partition nodes
     static class PositionInfo {
         int row, col;
-        PositionInfo(int row, int col) { this.row = row; this.col = col; }
 
+        // Store the grid coordinates as-is; Partition uses these as the element payload
+        PositionInfo(int row, int col) {
+            this.row = row; this.col = col;
+        }
+
+        // Equality is based purely on coordinates. This lets us use PositionInfo safely in sets/maps.
         @Override public boolean equals(Object o) {
             if (this == o) {
                 return true;
             }
-
             if (o == null || getClass() != o.getClass()) {
                 return false;
             }
-
             PositionInfo that = (PositionInfo) o;
-            
             return row == that.row && col == that.col;
         }
 
-        @Override public int hashCode() { 
-            return Objects.hash(row, col); 
+        @Override public int hashCode() {
+            return Objects.hash(row, col);
         }
     }
 
-    // Lake data (area + which island leader contains it)
+    // Captures a lake's size and which island leader owns it
     static class LakeInfo {
         int area;
         Node<PositionInfo> containingIsland;
@@ -59,7 +61,7 @@ public class IslandLakeSurvey {
         }
     }
 
-
+    // Main function running all methods together
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
         try {
@@ -67,6 +69,8 @@ public class IslandLakeSurvey {
             int cols = scanner.nextInt();
 
             char[][] map = new char[rows][cols];
+
+            // Read S lines of 0/1 characters. We don't validate here; assume input is well-formed per spec.
             for (int i = 0; i < rows; i++) {
                 String line = scanner.next();
                 for (int j = 0; j < cols; j++) map[i][j] = line.charAt(j);
@@ -74,21 +78,22 @@ public class IslandLakeSurvey {
 
             int numPhases = scanner.nextInt();
 
-            // Partitions and cluster grids
-            Partition<PositionInfo> BP = new Partition<>();             // black points (islands)
-            Partition<PositionInfo> WP = new Partition<>();             // white points (potential lakes)
+            // BP tracks islands (black points). WP tracks white components (potential lakes).
+            Partition<PositionInfo> BP = new Partition<>();
+            Partition<PositionInfo> WP = new Partition<>();
             @SuppressWarnings("unchecked")
-            Node<PositionInfo>[][] cluster = new Node[rows][cols];      // black cluster positions
+            Node<PositionInfo>[][] cluster = new Node[rows][cols];      // BP nodes per black cell
             @SuppressWarnings("unchecked")
-            Node<PositionInfo>[][] whiteCluster = new Node[rows][cols]; // white cluster positions
+            Node<PositionInfo>[][] whiteCluster = new Node[rows][cols]; // WP nodes per white cell
 
-            // ----- Phase 0: build BP and WP from the initial map -----
+            // Phase 0: build initial partitions and report
             IslandLakeResult result = processInitialPhase(map, rows, cols, BP, WP, cluster, whiteCluster);
             printResults(result);
 
+            // Match sample formatting: blank line only if more phases follow
             if (numPhases > 0) System.out.println();
 
-            // ----- Subsequent phases -----
+            // Subsequent phases: add land, update BP, rebuild WP (simpler + correct), then report
             for (int phase = 0; phase < numPhases; phase++) {
                 int L = scanner.nextInt();
                 List<PositionInfo> newPositions = new ArrayList<>();
@@ -97,22 +102,22 @@ public class IslandLakeSurvey {
                     int j = scanner.nextInt();
                     newPositions.add(new PositionInfo(i, j));
                 }
-            
+
                 result = processNewPhase(map, rows, cols, BP, cluster, newPositions);
                 printResults(result);
-            
+
                 if (phase < numPhases - 1) {
                     System.out.println();
                 }
             }
-            
+
         } catch (Exception e) {
+            // Keep the error message terse so the output file doesn't get polluted
             System.err.println("Error reading input: " + e.getMessage());
         } finally {
             scanner.close();
         }
     }
-
 
     private static void printResults(IslandLakeResult result) {
         // 1) number of islands
@@ -125,16 +130,16 @@ public class IslandLakeSurvey {
             for (int sz : result.islandSizes) System.out.println(sz);
         }
 
-        // 3) total island area
+        // 3) total island area (this already includes lakes for 2B)
         System.out.println(result.totalIslandArea);
 
-        // 4–5) lakes lines: suppress when there are no islands AND no lakes (matches sample)
+        // The assignment sample omits lake lines only in the degenerate case: no islands and no lakes.
+        // Otherwise, always print both lake lines.
         if (!(result.islandCount == 0 && result.totalLakeCount == 0 && result.totalLakeArea == 0)) {
             System.out.println(result.totalLakeCount);
             System.out.println(result.totalLakeArea);
         }
     }
-
 
     // Phase 0: build BP with 4-neighbor connectivity; build WP with 8-neighbor connectivity
     private static IslandLakeResult processInitialPhase(
@@ -142,7 +147,7 @@ public class IslandLakeSurvey {
             Partition<PositionInfo> BP, Partition<PositionInfo> WP,
             Node<PositionInfo>[][] cluster, Node<PositionInfo>[][] whiteCluster) {
 
-        // Create black clusters
+        // Create a singleton BP node for every black cell
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
                 if (map[i][j] == '1') {
@@ -151,7 +156,7 @@ public class IslandLakeSurvey {
                 }
             }
         }
-        // Union adjacent black cells (4-neighbor)
+        // Union adjacent black cells (4-neighbor only). Checking right/down avoids double work.
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
                 if (map[i][j] == '1') {
@@ -167,7 +172,7 @@ public class IslandLakeSurvey {
             }
         }
 
-        // Create white clusters (8-neighbor / corners allowed)
+        // Build WP with corner connectivity (8-neighbor). This is per the 2B hint.
         buildWhitePartitionFromScratch(map, rows, cols, WP, whiteCluster);
 
         return getCurrentResults(map, rows, cols, BP, WP, cluster, whiteCluster);
@@ -179,14 +184,14 @@ public class IslandLakeSurvey {
             Partition<PositionInfo> BP, Node<PositionInfo>[][] cluster,
             List<PositionInfo> newPositions) {
 
-        // Create new singleton clusters and flip to black
+        // Create BP nodes for new land, and flip the map to '1'
         for (PositionInfo pos : newPositions) {
             int i = pos.row, j = pos.col;
             cluster[i][j] = BP.makeCluster(pos);
             map[i][j] = '1';
         }
 
-        // Union with adjacent existing blacks (4-neighbor)
+        // Connect new land to any side-adjacent existing land (4-neighbor)
         int[][] sideDirs = {{0,1},{1,0},{0,-1},{-1,0}};
         for (PositionInfo pos : newPositions) {
             int i = pos.row, j = pos.col;
@@ -200,7 +205,7 @@ public class IslandLakeSurvey {
             }
         }
 
-        // Rebuild the white partition from scratch (simplest & correct)
+        // Rebuild WP every phase. It’s simpler and avoids delicate incremental corner-cases.
         Partition<PositionInfo> WP = new Partition<>();
         @SuppressWarnings("unchecked")
         Node<PositionInfo>[][] whiteCluster = new Node[rows][cols];
@@ -214,7 +219,7 @@ public class IslandLakeSurvey {
             char[][] map, int rows, int cols,
             Partition<PositionInfo> WP, Node<PositionInfo>[][] whiteCluster) {
 
-        // Make clusters
+        // First pass: create a node for every white cell
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
                 if (map[i][j] == '0') {
@@ -223,7 +228,7 @@ public class IslandLakeSurvey {
                 }
             }
         }
-        // Union 8-neighbor whites
+        // Second pass: union with all 8 neighbors to join diagonally touching whites
         int[][] allDirs = {{0,1},{1,0},{0,-1},{-1,0},{1,1},{1,-1},{-1,1},{-1,-1}};
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
@@ -241,18 +246,19 @@ public class IslandLakeSurvey {
         }
     }
 
-
+    // Aggregate everything needed for printing from BP (islands) and WP (white components)
     private static IslandLakeResult getCurrentResults(
             char[][] map, int rows, int cols,
             Partition<PositionInfo> BP, Partition<PositionInfo> WP,
             Node<PositionInfo>[][] cluster, Node<PositionInfo>[][] whiteCluster) {
 
-        // 1) Identify lakes from white components
+        // Find all lakes first; we’ll add their area to the owning island leader
         List<LakeInfo> lakes = identifyLakes(map, rows, cols, BP, WP, cluster, whiteCluster);
         int totalLakeCount = lakes.size();
         int totalLakeArea  = lakes.stream().mapToInt(l -> l.area).sum();
 
-        // 2) Build base island sizes by BP leader (count black cells per island)
+        // Count black cells per island leader by scanning the grid; this avoids any reliance
+        // on internal Partition structures and stays faithful to the ADT.
         Map<Node<PositionInfo>, Integer> baseSizes = new HashMap<>();
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
@@ -263,12 +269,13 @@ public class IslandLakeSurvey {
             }
         }
 
-        // 3) Add lake areas to their containing island (by the same leader)
+        // Accumulate lake area by island leader so we can add it cleanly to the base sizes
         Map<Node<PositionInfo>, Integer> lakeByIsland = new HashMap<>();
         for (LakeInfo lake : lakes) {
             lakeByIsland.merge(lake.containingIsland, lake.area, Integer::sum);
         }
 
+        // Convert per-leader sizes to a sorted list of integers (final island sizes)
         List<Integer> finalSizes = new ArrayList<>();
         for (Map.Entry<Node<PositionInfo>, Integer> e : baseSizes.entrySet()) {
             int withLakes = e.getValue() + lakeByIsland.getOrDefault(e.getKey(), 0);
@@ -282,13 +289,14 @@ public class IslandLakeSurvey {
         return new IslandLakeResult(islandCount, finalSizes, totalIslandArea, totalLakeCount, totalLakeArea);
     }
 
-    // Identify lakes: WP clusters that (a) do not touch the map edge and (b) by SIDES touch exactly one island
+    // Identify lakes: a WP component that (a) does not touch the map edge and (b) by SIDES touches exactly one island
     private static List<LakeInfo> identifyLakes(
             char[][] map, int rows, int cols,
             Partition<PositionInfo> BP, Partition<PositionInfo> WP,
             Node<PositionInfo>[][] cluster, Node<PositionInfo>[][] whiteCluster) {
 
         List<LakeInfo> lakes = new ArrayList<>();
+        // We only want to process each WP component once, so keep track by its leader
         Set<Node<PositionInfo>> seen = new HashSet<>();
 
         for (int i = 0; i < rows; i++) {
@@ -305,30 +313,33 @@ public class IslandLakeSurvey {
         return lakes;
     }
 
-    // A white WP cluster is a lake if it: (1) does not touch the outside edge, and (2) by SIDES touches exactly one island
+    // Decide if a white component is a lake. If so, return its area and the owning island leader.
     private static LakeInfo checkIfLake(
             char[][] map, int rows, int cols, Node<PositionInfo> whiteHead,
             Partition<PositionInfo> BP, Partition<PositionInfo> WP, Node<PositionInfo>[][] cluster) {
 
+        // Get all nodes for this white component so we can check edges and adjacency thoroughly
         List<Node<PositionInfo>> whites = WP.clusterPositions(whiteHead);
         int area = whites.size();
 
         boolean touchesEdge = false;
+        // We’ll collect distinct BP leaders that this white component touches by SIDES
         Set<Node<PositionInfo>> adjacentIslands = new HashSet<>();
 
-        int[][] sideDirs = {{0,1},{1,0},{0,-1},{-1,0}}; // SIDES ONLY for adjacency check
+        // Important: use 4-neighbor here (sides only) to test adjacency to islands (per spec)
+        int[][] sideDirs = {{0,1},{1,0},{0,-1},{-1,0}};
 
         for (Node<PositionInfo> wn : whites) {
             PositionInfo p = WP.element(wn);
             int i = p.row, j = p.col;
 
-            // touches outside edge?
+            // If any cell in the component is on the border, it is not a lake
             if (i == 0 || i == rows - 1 || j == 0 || j == cols - 1) {
                 touchesEdge = true;
                 break;
             }
 
-            // collect adjacent island leaders by sides
+            // Collect which island leaders are side-adjacent to this white cell
             for (int[] d : sideDirs) {
                 int ni = i + d[0], nj = j + d[1];
                 if (ni >= 0 && ni < rows && nj >= 0 && nj < cols && map[ni][nj] == '1') {
@@ -337,6 +348,7 @@ public class IslandLakeSurvey {
             }
         }
 
+        // Lake must be fully interior and touch exactly one island by sides
         if (!touchesEdge && adjacentIslands.size() == 1) {
             Node<PositionInfo> containingIsland = adjacentIslands.iterator().next();
             return new LakeInfo(area, containingIsland);

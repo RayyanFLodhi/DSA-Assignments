@@ -116,10 +116,8 @@ public class IslandSurvey {
         System.out.println(result.totalArea);
     }
     
-    /**
-     * Processes the initial phase (Phase 0) - creates initial partition from the map
-     * Follows the exact algorithm specification from the assignment
-    */
+    
+    // Processes the initial phase - creating initial partition from the map
     private static IslandResult processInitialPhase(char[][] map, int rows, int cols, Partition<PositionInfo> BP, Node<PositionInfo>[][] cluster) {        
         // Create S by T auxiliary array cluster to keep track of cluster positions (map)
         // with all entries initialized to null (already done in main)
@@ -161,10 +159,7 @@ public class IslandSurvey {
         return getCurrentResults(BP);
     }
     
-    /**
-     * Processes a new phase by adding new black positions and updating islands
-     * Follows the exact algorithm specification from the assignment
-     */
+    // Processes a new phase by adding new black positions and updating islands
     private static IslandResult processNewPhase(char[][] map, int rows, int cols, Partition<PositionInfo> BP, Node<PositionInfo>[][] cluster, List<PositionInfo> newPositions) {
         
         // for each point i,j in the new list
@@ -206,9 +201,8 @@ public class IslandSurvey {
         return getCurrentResults(BP);
     }
     
-    /**
-     * Gets the current island analysis results from the partition
-     */
+
+    // Gets the current island analysis results from the partition
     private static IslandResult getCurrentResults(Partition<PositionInfo> BP) {
         // Get island count and sizes
         int islandCount = BP.numberOfClusters();
