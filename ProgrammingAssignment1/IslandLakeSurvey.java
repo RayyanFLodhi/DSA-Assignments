@@ -7,8 +7,6 @@ import java.util.*;
 
 public class IslandLakeSurvey {
 
-    /* ------------------------- Helper Data Types ------------------------- */
-
     // Holds the printed results for a survey block
     static class IslandLakeResult {
         int islandCount;
@@ -33,12 +31,22 @@ public class IslandLakeSurvey {
         PositionInfo(int row, int col) { this.row = row; this.col = col; }
 
         @Override public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o) {
+                return true;
+            }
+
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
             PositionInfo that = (PositionInfo) o;
+            
             return row == that.row && col == that.col;
         }
-        @Override public int hashCode() { return Objects.hash(row, col); }
+
+        @Override public int hashCode() { 
+            return Objects.hash(row, col); 
+        }
     }
 
     // Lake data (area + which island leader contains it)
@@ -51,7 +59,6 @@ public class IslandLakeSurvey {
         }
     }
 
-    /* ------------------------------- Main ------------------------------- */
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -106,7 +113,6 @@ public class IslandLakeSurvey {
         }
     }
 
-    /* ------------------------- Printing (2B format) ------------------------- */
 
     private static void printResults(IslandLakeResult result) {
         // 1) number of islands
@@ -129,7 +135,6 @@ public class IslandLakeSurvey {
         }
     }
 
-    /* ----------------------------- Algorithms ----------------------------- */
 
     // Phase 0: build BP with 4-neighbor connectivity; build WP with 8-neighbor connectivity
     private static IslandLakeResult processInitialPhase(
@@ -236,7 +241,6 @@ public class IslandLakeSurvey {
         }
     }
 
-    /* -------------------------- Result Computation -------------------------- */
 
     private static IslandLakeResult getCurrentResults(
             char[][] map, int rows, int cols,
